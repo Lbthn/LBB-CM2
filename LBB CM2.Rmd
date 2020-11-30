@@ -1,0 +1,93 @@
+---
+title: "LBB CM2"
+output: html_document
+---
+---
+title: "LBB P4DS R"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(e1071)
+library(caret)
+library(dplyr)
+library(partykit)
+```
+
+## Data Loading and Initial Inspection
+```{r cars}
+genderdata <- read.csv("train.csv")
+colSums(is.na(genderdata))
+```
+```{r}
+head(genderdata)
+```
+
+Dari pengamatan data, menunjukkan row age menunjukkan 177 missing value, untuk tujuan dari tugas ini, maka row yang mengandung missing value akan dihapus. Lalu beberapa kolom akan dipakai untuk mencoba melihat survivalbility berdasarkan umur, dan kelas tiket
+
+```{r}
+FixData <- genderdata[c("PassengerId", "Survived", "Pclass", "Sex")]
+head(FixData)
+```
+
+# Data Type Transformation
+
+Kolom Survived, Pclass dan jenis kelamin akan diubah menjadi kategori 
+
+```{r}
+FixData$Survived <- as.factor(FixData$Survived)
+FixData$Pclass <- as.factor(FixData$Pclass)
+FixData$Sex <- as.factor(FixData$Sex)
+str(FixData)
+```
+
+# Split Data Set
+
+```{r}
+RNGkind(sample.kind = "Rounding")
+set.seed(100)
+intrain <- sample(nrow(FixData), 0.8*nrow(FixData))
+ship_train <- FixData[intrain,]
+ship_test <- FixData[-intrain,]
+```
+
+## Modelling 
+
+Modelling dengan Naive Bayes
+
+```{r}
+naivebayesmodel <- naiveBayes(Survived ~ . , data = ship_train)
+```
+
+Dibuat hasil prediksi dan dibandingkan dengan data yang asli
+```{r}
+pred <- predict(naivebayesmodel, newdata = ship_test, type = "class")
+confusionMatrix(pred, ship_test$Survived, positive = "1")
+```
+Hasil menunjukkan akurasi yang cukup baik yaitu 0.82 dan sensitivitas 0.7 serta spesifisitas 0.89
+
+Selanjutnya kita coba bandingkan dengan model dengan decision tree
+
+```{r}
+pohon <- ctree(Survived ~ . , data= ship_train, control = ctree_control(mincriterion=0.005,
+minsplit=0,
+minbucket=0))
+```
+
+```{r}
+pred_tree <- predict(pohon, newdata = ship_test, type = "response")
+confusionMatrix(pred_tree, ship_test$Survived, positive = "1")
+```
+Berdasarkan hasil di atas, model memiliki akurasi 0.74, sensitivitas 0.68 dan spesifisitas 0.78. 
+
+Secara umum, model naive bayes memiliki performa yang lebih baik dibandingkan model decision tree. 
+
+## Conclusion
+
+Sebagai kesimpulan saya memilih model naive bayes karena memiliki performa yang lebih baik. Saya menekankan penggunaan fitur spesifisitas karena dalam kasus ini jika penumpang diprediksi tidak akan selamat, maka pihak yang berwenang dapat mengambil tindakan preventif yang lebih baik.
+
+
+
